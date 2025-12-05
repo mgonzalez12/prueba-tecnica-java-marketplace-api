@@ -404,6 +404,36 @@ curl -X POST http://localhost:8080/api/v1/orders \
   }'
 ```
 
+### Importar Clientes desde CSV (formato)
+
+El endpoint `POST /api/v1/files/import/customers` espera un archivo CSV con el siguiente formato
+(la primera fila es cabecera):
+
+```csv
+firstName,lastName,email,phone,address,birthDate,status
+Juan,Pérez,juan@example.com,+34111111111,"Calle 1, Madrid","1990-01-15",ACTIVE
+Ana,García,ana@example.com,+34222222222,"Avenida 2, Barcelona","1985-06-20",INACTIVE
+```
+
+- `birthDate` debe ir en formato `yyyy-MM-dd`.
+- `status` es opcional; si se omite, el servicio lo tratará según la lógica de negocio.
+
+### Importar Productos desde CSV (formato)
+
+El endpoint `POST /api/v1/files/import/products` acepta el mismo formato que genera
+`GET /api/v1/files/export/products`. Ejemplo de archivo CSV (incluyendo cabecera):
+
+```csv
+ID,SKU,Name,Description,Price,Promotional Price,Category ID,Active,Is External,External Provider ID
+,SKU-001,"Zapatillas Nike","Zapatillas deportivas",89.99,79.99,2,true,false,
+,SKU-EXT-123,"Gorra externa","Gorra desde proveedor externo",15.50,,5,true,true,123
+```
+
+- La columna `ID` se ignora al importar (la base de datos genera un nuevo ID).
+- `Category ID` debe ser un ID de categoría válido ya existente.
+- `Active` e `Is External` aceptan `true` o `false`.
+- `Promotional Price` y `External Provider ID` pueden quedar vacíos.
+
 ## 🔧 Configuración
 
 ### application.yaml

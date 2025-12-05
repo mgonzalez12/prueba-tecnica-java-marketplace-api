@@ -20,7 +20,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @Import(CustomerSpringJpaAdapterIntegrationTest.MapperConfig.class)
 @TestPropertySource(properties = {
-    "spring.jpa.hibernate.ddl-auto=create-drop"
+    "spring.jpa.hibernate.ddl-auto=create-drop",
+    "spring.sql.init.mode=never"
 })
 @DisplayName("Customer Spring JPA Adapter Integration Tests")
 class CustomerSpringJpaAdapterIntegrationTest {
