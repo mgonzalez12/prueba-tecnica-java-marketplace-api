@@ -1,4 +1,4 @@
-package com.marketplace.infrastructure.adapter.output.external.dto;
+package com.marketplace.infrastructure.rest.dto.external;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,7 +9,9 @@ import java.util.List;
 
 /**
  * DTO for creating products in the external Fake Store API.
- * Matches the expected payload:
+ * Located under infrastructure.rest.dto to keep all DTOs in a single root package.
+ *
+ * Expected payload:
  * {
  *   "title": "New Product",
  *   "price": 10,

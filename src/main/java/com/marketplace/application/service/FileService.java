@@ -266,27 +266,75 @@ public class FileService {
         return customer;
     }
 
+    /**
+     * Parses a product from a CSV row.
+     * Expected format (aligned with export header):
+     * ID, SKU, Name, Description, Price, Promotional Price, Category ID, Active, Is External, External Provider ID
+     */
     private Product parseProductFromCsvRow(String[] row) {
         if (row.length < 4) {
             throw new IllegalArgumentException("Invalid CSV row format for product");
         }
-        
+
+        // Indexes based on export header:
+        // 0: ID (ignored)
+        // 1: SKU
+        // 2: Name
+        // 3: Description
+        // 4: Price
+        // 5: Promotional Price
+        // 6: Category ID
+        // 7: Active
+        // 8: Is External
+        // 9: External Provider ID
+
         Product product = new Product();
-        product.setSku(row[0]);
-        product.setName(row[1]);
-        product.setDescription(row[2]);
-        
-        if (row.length > 3 && !row[3].isEmpty()) {
-            product.setPrice(new BigDecimal(row[3]));
-        }
+
+        int i = 0;
+        String sku = row.length > 1 ? row[1] : row[0]; // allow files without ID as first column
+        String name = row.length > 2 ? row[2] : (row.length > 1 ? row[1] : null);
+        String description = row.length > 3 ? row[3] : null;
+
+        product.setSku(sku);
+        product.setName(name);
+        product.setDescription(description);
+
         if (row.length > 4 && !row[4].isEmpty()) {
-            product.setPromotionalPrice(new BigDecimal(row[4]));
+            product.setPrice(new BigDecimal(row[4]));
         }
-        
-        product.setActive(true);
+        if (row.length > 5 && !row[5].isEmpty()) {
+            product.setPromotionalPrice(new BigDecimal(row[5]));
+        }
+
+        if (row.length > 6 && !row[6].isEmpty()) {
+            try {
+                Long categoryId = Long.parseLong(row[6]);
+                com.marketplace.domain.model.Category category = com.marketplace.domain.model.Category.builder()
+                        .id(categoryId)
+                        .build();
+                product.setCategory(category);
+            } catch (NumberFormatException e) {
+                log.warn("Invalid category ID '{}' in CSV row, skipping category mapping", row[6]);
+            }
+        }
+
+        if (row.length > 7 && !row[7].isEmpty()) {
+            product.setActive(Boolean.parseBoolean(row[7]));
+        } else {
+            product.setActive(true);
+        }
+
+        if (row.length > 8 && !row[8].isEmpty()) {
+            product.setIsExternal(Boolean.parseBoolean(row[8]));
+        }
+
+        if (row.length > 9 && !row[9].isEmpty()) {
+            product.setExternalProviderId(row[9]);
+        }
+
         product.setCreatedAt(java.time.LocalDateTime.now());
         product.setUpdatedAt(java.time.LocalDateTime.now());
-        
+
         return product;
     }
 

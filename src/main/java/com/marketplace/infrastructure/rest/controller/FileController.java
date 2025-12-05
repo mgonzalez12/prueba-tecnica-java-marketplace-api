@@ -25,9 +25,9 @@ public class FileController {
 
     private final FileService fileService;
 
-    @PostMapping("/import/customers")
+    @PostMapping(value = "/import/customers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Import customers from CSV file")
-    public ResponseEntity<List<Customer>> importCustomers(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<List<Customer>> importCustomers(@RequestPart("file") MultipartFile file) {
         try {
             List<Customer> customers = fileService.importCustomersFromCsv(file);
             return ResponseEntity.ok(customers);
@@ -36,9 +36,9 @@ public class FileController {
         }
     }
 
-    @PostMapping("/import/products")
+    @PostMapping(value = "/import/products", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Import products from CSV file")
-    public ResponseEntity<List<Product>> importProducts(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<List<Product>> importProducts(@RequestPart("file") MultipartFile file) {
         try {
             List<Product> products = fileService.importProductsFromCsv(file);
             return ResponseEntity.ok(products);

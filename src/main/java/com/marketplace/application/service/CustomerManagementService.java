@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -21,17 +22,23 @@ public class CustomerManagementService implements CustomerService {
     @Transactional
     public Customer registerCustomer(Customer customer) {
         // Set registration date using legacy Date API as required
-        if (customer.getRegistrationDate() == null) {
-            customer.setRegistrationDate(new Date());
-        }
+        customer.setRegistrationDate(
+                Optional.ofNullable(customer.getRegistrationDate())
+                        .orElseGet(Date::new)
+        );
+
         // Set initial activity date
-        if (customer.getLastActivityDate() == null) {
-            customer.setLastActivityDate(LocalDate.now());
-        }
+        customer.setLastActivityDate(
+                Optional.ofNullable(customer.getLastActivityDate())
+                        .orElseGet(LocalDate::now)
+        );
+
         // Initialize counters
-        if (customer.getTotalOrders() == null) {
-            customer.setTotalOrders(0);
-        }
+        customer.setTotalOrders(
+                Optional.ofNullable(customer.getTotalOrders())
+                        .orElse(0)
+        );
+
         return customerPersistencePort.save(customer);
     }
 
@@ -41,30 +48,14 @@ public class CustomerManagementService implements CustomerService {
         Customer existing = getCustomer(id);
         
         // Update fields
-        if (customer.getFirstName() != null) {
-            existing.setFirstName(customer.getFirstName());
-        }
-        if (customer.getLastName() != null) {
-            existing.setLastName(customer.getLastName());
-        }
-        if (customer.getEmail() != null) {
-            existing.setEmail(customer.getEmail());
-        }
-        if (customer.getPhone() != null) {
-            existing.setPhone(customer.getPhone());
-        }
-        if (customer.getAddress() != null) {
-            existing.setAddress(customer.getAddress());
-        }
-        if (customer.getBirthDate() != null) {
-            existing.setBirthDate(customer.getBirthDate());
-        }
-        if (customer.getRenewalDate() != null) {
-            existing.setRenewalDate(customer.getRenewalDate());
-        }
-        if (customer.getStatus() != null) {
-            existing.setStatus(customer.getStatus());
-        }
+        Optional.ofNullable(customer.getFirstName()).ifPresent(existing::setFirstName);
+        Optional.ofNullable(customer.getLastName()).ifPresent(existing::setLastName);
+        Optional.ofNullable(customer.getEmail()).ifPresent(existing::setEmail);
+        Optional.ofNullable(customer.getPhone()).ifPresent(existing::setPhone);
+        Optional.ofNullable(customer.getAddress()).ifPresent(existing::setAddress);
+        Optional.ofNullable(customer.getBirthDate()).ifPresent(existing::setBirthDate);
+        Optional.ofNullable(customer.getRenewalDate()).ifPresent(existing::setRenewalDate);
+        Optional.ofNullable(customer.getStatus()).ifPresent(existing::setStatus);
         
         return customerPersistencePort.save(existing);
     }

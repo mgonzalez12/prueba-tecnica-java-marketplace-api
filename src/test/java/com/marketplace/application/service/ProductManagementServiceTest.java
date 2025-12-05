@@ -1,5 +1,6 @@
 package com.marketplace.application.service;
 
+import com.marketplace.application.usecases.InventoryService;
 import com.marketplace.domain.model.Product;
 import com.marketplace.domain.port.ProductPersistencePort;
 import com.marketplace.domain.service.ProductDomainService;
@@ -28,6 +29,9 @@ class ProductManagementServiceTest {
 
     @Mock
     private ProductDomainService productDomainService;
+
+    @Mock
+    private InventoryService inventoryService;
 
     @InjectMocks
     private ProductManagementService productManagementService;
