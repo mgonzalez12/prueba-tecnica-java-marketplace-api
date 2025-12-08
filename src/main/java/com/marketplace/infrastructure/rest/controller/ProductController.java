@@ -8,11 +8,13 @@ import com.marketplace.infrastructure.rest.dto.request.ProductRequestDto;
 import com.marketplace.infrastructure.rest.dto.response.ProductResponseDto;
 import com.marketplace.infrastructure.rest.mapper.ProductRestMapper;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +23,7 @@ import java.util.List;
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
 @Tag(name = "Products", description = "Product management APIs")
+@SecurityRequirement(name = "bearerAuth")
 public class ProductController {
 
     private final ProductService productService;
@@ -29,6 +32,7 @@ public class ProductController {
 
     @PostMapping
     @Operation(summary = "Create a new product")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductResponseDto> createProduct(@Valid @RequestBody ProductRequestDto request) {
         Product product = buildDomainProduct(request);
         Product created = productService.createProduct(product);
@@ -37,6 +41,7 @@ public class ProductController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get product by ID")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<ProductResponseDto> getProduct(@PathVariable Long id) {
         Product product = productService.getProduct(id);
         return ResponseEntity.ok(productRestMapper.toResponse(product));
@@ -44,6 +49,7 @@ public class ProductController {
 
     @GetMapping
     @Operation(summary = "Get all products")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<List<ProductResponseDto>> getAllProducts() {
         List<ProductResponseDto> products = productService.getAllProducts().stream()
                 .map(productRestMapper::toResponse)
@@ -53,6 +59,7 @@ public class ProductController {
 
     @GetMapping("/category/{categoryId}")
     @Operation(summary = "Get products by category")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ProductResponseDto>> getProductsByCategory(@PathVariable Long categoryId) {
         List<ProductResponseDto> products = productService.getProductsByCategory(categoryId).stream()
                 .map(productRestMapper::toResponse)
@@ -62,6 +69,7 @@ public class ProductController {
 
     @GetMapping("/search")
     @Operation(summary = "Search products")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<List<ProductResponseDto>> searchProducts(@RequestParam String q) {
         List<ProductResponseDto> products = productService.searchProducts(q).stream()
                 .map(productRestMapper::toResponse)
@@ -71,6 +79,7 @@ public class ProductController {
 
     @GetMapping("/{id}/similarity")
     @Operation(summary = "Calculate product similarity using matrix operations", hidden = true)
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<double[]> calculateSimilarity(
             @PathVariable Long id,
             @RequestBody double[][] weights) {
@@ -79,6 +88,7 @@ public class ProductController {
 
     @GetMapping("/{id}/recommendations")
     @Operation(summary = "Get product recommendations")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ProductResponseDto>> getRecommendations(
             @PathVariable Long id,
             @RequestParam(defaultValue = "5") int limit) {
@@ -90,6 +100,7 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update product")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductResponseDto> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductRequestDto request) {
@@ -100,6 +111,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete product")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build();

@@ -24,6 +24,11 @@ spring:
     init:
       mode: always
 
+security:
+  jwt:
+    secret: "change-this-secret-in-production-please-change-this-secret"
+    expiration-ms: 3600000 # 1 hora
+
 springdoc:
   api-docs:
     path: /api-docs

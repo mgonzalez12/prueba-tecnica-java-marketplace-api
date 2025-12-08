@@ -5,12 +5,14 @@ import com.marketplace.domain.model.Customer;
 import com.marketplace.domain.model.Product;
 import com.opencsv.exceptions.CsvException;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,12 +23,14 @@ import java.util.List;
 @RequestMapping("/api/v1/files")
 @RequiredArgsConstructor
 @Tag(name = "Files", description = "File import/export APIs")
+@SecurityRequirement(name = "bearerAuth")
 public class FileController {
 
     private final FileService fileService;
 
     @PostMapping(value = "/import/customers", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Import customers from CSV file")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Customer>> importCustomers(@RequestPart("file") MultipartFile file) {
         try {
             List<Customer> customers = fileService.importCustomersFromCsv(file);
@@ -38,6 +42,7 @@ public class FileController {
 
     @PostMapping(value = "/import/products", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Import products from CSV file")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Product>> importProducts(@RequestPart("file") MultipartFile file) {
         try {
             List<Product> products = fileService.importProductsFromCsv(file);
@@ -49,6 +54,7 @@ public class FileController {
 
     @GetMapping("/export/customers")
     @Operation(summary = "Export customers to CSV")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> exportCustomers() {
         try {
             byte[] csvData = fileService.exportCustomersToCsv();
@@ -63,6 +69,7 @@ public class FileController {
 
     @GetMapping("/export/products")
     @Operation(summary = "Export products to CSV")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> exportProducts() {
         try {
             byte[] csvData = fileService.exportProductsToCsv();
