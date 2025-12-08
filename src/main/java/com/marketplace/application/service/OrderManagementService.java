@@ -6,11 +6,12 @@ import com.marketplace.domain.model.Inventory;
 import com.marketplace.domain.model.Order;
 import com.marketplace.domain.model.OrderItem;
 import com.marketplace.domain.port.OrderPersistencePort;
-import com.marketplace.domain.service.OrderDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -20,7 +21,6 @@ import java.util.UUID;
 public class OrderManagementService implements OrderService {
 
     private final OrderPersistencePort orderPersistencePort;
-    private final OrderDomainService orderDomainService;
     private final InventoryService inventoryService;
 
     @Override
@@ -67,7 +67,7 @@ public class OrderManagementService implements OrderService {
         }
         
         // Calculate totals
-        orderDomainService.calculateOrderTotals(order);
+        calculateOrderTotals(order);
         
         // Save order
         Order savedOrder = orderPersistencePort.save(order);
@@ -160,5 +160,41 @@ public class OrderManagementService implements OrderService {
     public List<Order> getAllOrders() {
         return orderPersistencePort.findAll();
     }
+
+        /**
+         * Calcula subtotal, impuestos y total de un pedido a partir de sus items.
+         */
+        private void calculateOrderTotals(Order order) {
+            List<OrderItem> items = order.getItems();
+
+            if (items == null || items.isEmpty()) {
+                order.setSubtotalAmount(BigDecimal.ZERO);
+                order.setTaxAmount(BigDecimal.ZERO);
+                order.setTotalAmount(BigDecimal.ZERO);
+                return;
+            }
+
+            BigDecimal subtotal = BigDecimal.ZERO;
+
+            for (OrderItem item : items) {
+                if (item.getSubtotal() != null) {
+                    subtotal = subtotal.add(item.getSubtotal());
+                }
+            }
+
+            order.setSubtotalAmount(subtotal);
+
+            // Impuesto 21% con 2 decimales
+            BigDecimal tax = subtotal
+                    .multiply(new BigDecimal("0.21"))
+                    .setScale(2, RoundingMode.HALF_UP);
+            order.setTaxAmount(tax);
+
+            // Total = subtotal + impuesto (2 decimales)
+            BigDecimal total = subtotal
+                    .add(tax)
+                    .setScale(2, RoundingMode.HALF_UP);
+            order.setTotalAmount(total);
+        }
 }
 
