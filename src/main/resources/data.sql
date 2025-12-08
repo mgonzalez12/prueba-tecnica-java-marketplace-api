@@ -31,3 +31,26 @@ VALUES ('John', 'Doe', 'john.doe@example.com', 'ACTIVE', '1990-01-01', CURRENT_T
 INSERT INTO customers (first_name, last_name, email, status, birth_date, registration_date, phone, address, total_orders, total_spent)
 VALUES ('Jane', 'Smith', 'jane.smith@example.com', 'ACTIVE', '1995-05-15', CURRENT_TIMESTAMP, '+0987654321', '456 Second St', 0, 0);
 
+-- Insert roles
+INSERT INTO roles (name) VALUES ('ADMIN');
+INSERT INTO roles (name) VALUES ('USER');
+
+-- Insert admin user (El correo es admin@technicaldtm.com y el password es: password)
+INSERT INTO users (first_name, last_name, email, password, is_active) 
+VALUES ('Marcos', 'Gonzalez', 'admin@technicaldtm.com', '$2a$10$3alVQbqds1Oxxnw8MKkO0eYFQgTvfK93CuDXLAt2mpkNem43ne.A6', true);
+
+-- Insert user_role for admin
+INSERT INTO user_roles (user_id, role_id) 
+SELECT u.id, r.id 
+FROM users u, roles r 
+WHERE u.email = 'admin@technicaldtm.com' AND r.name = 'ADMIN';
+
+-- Insert regular user (password: password)
+INSERT INTO users (first_name, last_name, email, password, is_active) 
+VALUES ('John', 'Doe', 'user@technicaldtm.com', '$2a$10$3alVQbqds1Oxxnw8MKkO0eYFQgTvfK93CuDXLAt2mpkNem43ne.A6', true);
+
+-- Insert user_role for regular user
+INSERT INTO user_roles (user_id, role_id) 
+SELECT u.id, r.id 
+FROM users u, roles r 
+WHERE u.email = 'user@technicaldtm.com' AND r.name = 'USER';

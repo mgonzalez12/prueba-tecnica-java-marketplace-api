@@ -3,11 +3,13 @@ package com.marketplace.infrastructure.rest.controller;
 import com.marketplace.application.service.ReportService;
 import com.lowagie.text.DocumentException;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -16,12 +18,14 @@ import java.io.IOException;
 @RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
 @Tag(name = "Reports", description = "Report generation APIs")
+@SecurityRequirement(name = "bearerAuth")
 public class ReportController {
 
     private final ReportService reportService;
 
     @GetMapping("/commercial/pdf")
     @Operation(summary = "Generate commercial report in PDF format")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> generateCommercialReportPdf() {
         try {
             byte[] pdfData = reportService.generateCommercialReportPdf();
@@ -36,6 +40,7 @@ public class ReportController {
 
     @GetMapping("/inventory/excel")
     @Operation(summary = "Generate inventory report in Excel format")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> generateInventoryReportExcel() {
         try {
             byte[] excelData = reportService.generateInventoryReportExcel();
@@ -51,6 +56,7 @@ public class ReportController {
 
     @GetMapping("/sales/excel")
     @Operation(summary = "Generate sales report in Excel format")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> generateSalesReportExcel() {
         try {
             byte[] excelData = reportService.generateSalesReportExcel();
@@ -66,6 +72,7 @@ public class ReportController {
 
     @GetMapping("/external-products/excel")
     @Operation(summary = "Generate external products report in Excel format")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> generateExternalProductsReportExcel() {
         try {
             byte[] excelData = reportService.generateExternalProductsReportExcel();
