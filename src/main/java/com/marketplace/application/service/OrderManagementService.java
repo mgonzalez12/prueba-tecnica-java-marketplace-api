@@ -26,71 +26,79 @@ public class OrderManagementService implements OrderService {
     @Override
     @Transactional
     public Order createOrder(Order order) {
-        // Validate order has items
-        if (order.getItems() == null || order.getItems().isEmpty()) {
-            throw new IllegalArgumentException("Order must have at least one item");
-        }
-        
-        // Generate unique order number
-        if (order.getOrderNumber() == null) {
-            order.setOrderNumber("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        }
-        
-        // Set order date
-        if (order.getOrderDate() == null) {
-            order.setOrderDate(LocalDateTime.now());
-        }
-        
-        // Set initial status
-        if (order.getStatus() == null) {
-            order.setStatus(Order.OrderStatus.PENDING);
-        }
-        
-        // Validate and reserve stock for each item
-        for (OrderItem item : order.getItems()) {
+        // Validar que haya items (estilo funcional)
+        var items = java.util.Optional.ofNullable(order.getItems())
+                .filter(list -> !list.isEmpty())
+                .orElseThrow(() -> new IllegalArgumentException("Order must have at least one item"));
+
+        // Generar número de orden único si no viene informado
+        order.setOrderNumber(
+                java.util.Optional.ofNullable(order.getOrderNumber())
+                        .orElseGet(() -> "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+        );
+
+        // Fecha de la orden
+        order.setOrderDate(
+                java.util.Optional.ofNullable(order.getOrderDate())
+                        .orElseGet(LocalDateTime::now)
+        );
+
+        // Estado inicial usando switch expression (Java 21, soporta case null)
+        Order.OrderStatus currentStatus = order.getStatus();
+        Order.OrderStatus effectiveStatus = switch (currentStatus) {
+            case null -> Order.OrderStatus.PENDING;
+            default -> currentStatus;
+        };
+        order.setStatus(effectiveStatus);
+
+        // Validar y reservar stock para cada item (forEach funcional)
+        items.forEach(item -> {
             Inventory inventory = inventoryService.getInventoryByProductId(item.getProductId());
-            
-            // Check availability
+
             if (inventory.getAvailableQuantity() < item.getQuantity()) {
                 throw new IllegalStateException(
-                    String.format("Insufficient stock for product %d. Available: %d, Requested: %d",
-                        item.getProductId(), inventory.getAvailableQuantity(), item.getQuantity())
+                        String.format(
+                                "Insufficient stock for product %d. Available: %d, Requested: %d",
+                                item.getProductId(), inventory.getAvailableQuantity(), item.getQuantity()
+                        )
                 );
             }
-            
-            // Reserve stock
+
             inventoryService.reserveStock(
-                item.getProductId(), 
-                item.getQuantity(), 
-                order.getOrderNumber()
+                    item.getProductId(),
+                    item.getQuantity(),
+                    order.getOrderNumber()
             );
-        }
-        
+        });
+
         // Calculate totals
         calculateOrderTotals(order);
-        
+
         // Save order
         Order savedOrder = orderPersistencePort.save(order);
-        
+
         // Try to confirm order automatically if stock is available
         try {
             savedOrder.updateStatus(Order.OrderStatus.CONFIRMED);
-            savedOrder = orderPersistencePort.save(savedOrder);
-            
+            Order confirmedOrder = orderPersistencePort.save(savedOrder);
+
             // Confirm reserved stock (convert reservation to actual removal)
-            for (OrderItem item : savedOrder.getItems()) {
-                inventoryService.confirmReservedStock(
-                    item.getProductId(),
-                    item.getQuantity(),
-                    savedOrder.getOrderNumber()
-                );
-            }
+            java.util.Optional.ofNullable(confirmedOrder.getItems())
+                    .orElse(List.of())
+                    .forEach(item ->
+                            inventoryService.confirmReservedStock(
+                                    item.getProductId(),
+                                    item.getQuantity(),
+                                    confirmedOrder.getOrderNumber()
+                            )
+                    );
+
+            return confirmedOrder;
         } catch (Exception e) {
             // If confirmation fails, order remains PENDING
             // Stock remains reserved until order is confirmed or cancelled
+            return savedOrder;
         }
-        
-        return savedOrder;
     }
 
     @Override
@@ -111,17 +119,17 @@ public class OrderManagementService implements OrderService {
         
         try {
             order.updateStatus(newStatus);
-            
-            // Handle stock based on status change
+
+            // Manejo de stock según el nuevo estado (switch expression style)
             switch (newStatus) {
                 case CANCELLED -> {
                     // Release reserved stock
                     for (OrderItem item : order.getItems()) {
                         try {
                             inventoryService.releaseReservedStock(
-                                item.getProductId(),
-                                item.getQuantity(),
-                                order.getOrderNumber()
+                                    item.getProductId(),
+                                    item.getQuantity(),
+                                    order.getOrderNumber()
                             );
                         } catch (Exception e) {
                             // Log error but continue
@@ -133,17 +141,20 @@ public class OrderManagementService implements OrderService {
                     for (OrderItem item : order.getItems()) {
                         try {
                             inventoryService.confirmReservedStock(
-                                item.getProductId(),
-                                item.getQuantity(),
-                                order.getOrderNumber()
+                                    item.getProductId(),
+                                    item.getQuantity(),
+                                    order.getOrderNumber()
                             );
                         } catch (Exception e) {
                             // Log error but continue
                         }
                     }
                 }
+                // Otros estados (PENDING, DELIVERED, SHIPPED, FAILED) no requieren cambios de stock
+                default -> {
+                }
             }
-            
+
             return orderPersistencePort.save(order);
         } catch (IllegalStateException e) {
             throw new IllegalArgumentException("Cannot update order status: " + e.getMessage());
@@ -161,40 +172,38 @@ public class OrderManagementService implements OrderService {
         return orderPersistencePort.findAll();
     }
 
-        /**
-         * Calcula subtotal, impuestos y total de un pedido a partir de sus items.
-         */
-        private void calculateOrderTotals(Order order) {
-            List<OrderItem> items = order.getItems();
+    /**
+     * Calcula subtotal, impuestos y total de un pedido a partir de sus items.
+     */
+    private void calculateOrderTotals(Order order) {
+        List<OrderItem> items = java.util.Optional.ofNullable(order.getItems())
+                .orElse(List.of());
 
-            if (items == null || items.isEmpty()) {
-                order.setSubtotalAmount(BigDecimal.ZERO);
-                order.setTaxAmount(BigDecimal.ZERO);
-                order.setTotalAmount(BigDecimal.ZERO);
-                return;
-            }
-
-            BigDecimal subtotal = BigDecimal.ZERO;
-
-            for (OrderItem item : items) {
-                if (item.getSubtotal() != null) {
-                    subtotal = subtotal.add(item.getSubtotal());
-                }
-            }
-
-            order.setSubtotalAmount(subtotal);
-
-            // Impuesto 21% con 2 decimales
-            BigDecimal tax = subtotal
-                    .multiply(new BigDecimal("0.21"))
-                    .setScale(2, RoundingMode.HALF_UP);
-            order.setTaxAmount(tax);
-
-            // Total = subtotal + impuesto (2 decimales)
-            BigDecimal total = subtotal
-                    .add(tax)
-                    .setScale(2, RoundingMode.HALF_UP);
-            order.setTotalAmount(total);
+        if (items.isEmpty()) {
+            order.setSubtotalAmount(BigDecimal.ZERO);
+            order.setTaxAmount(BigDecimal.ZERO);
+            order.setTotalAmount(BigDecimal.ZERO);
+            return;
         }
+
+        BigDecimal subtotal = items.stream()
+                .map(OrderItem::getSubtotal)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        order.setSubtotalAmount(subtotal);
+
+        // Impuesto 21% con 2 decimales
+        BigDecimal tax = subtotal
+                .multiply(new BigDecimal("0.21"))
+                .setScale(2, RoundingMode.HALF_UP);
+        order.setTaxAmount(tax);
+
+        // Total = subtotal + impuesto (2 decimales)
+        BigDecimal total = subtotal
+                .add(tax)
+                .setScale(2, RoundingMode.HALF_UP);
+        order.setTotalAmount(total);
+    }
 }
 

@@ -32,6 +32,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 /**
  * Service for generating reports (PDF and Excel)
@@ -133,40 +135,38 @@ public class ReportService {
             // Create header row
             Row headerRow = sheet.createRow(0);
             String[] headers = {
-                "Product ID", "Quantity", "Reserved", "Available", 
+                "Product ID", "Quantity", "Reserved", "Available",
                 "Min Level", "Max Level", "Location", "Needs Reorder"
             };
-            
-            for (int i = 0; i < headers.length; i++) {
+
+            IntStream.range(0, headers.length).forEach(i -> {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(headers[i]);
                 cell.setCellStyle(headerStyle);
-            }
-            
-            // Create data rows
-            int rowNum = 1;
-            for (Inventory inventory : inventories) {
-                Row row = sheet.createRow(rowNum++);
-                
+            });
+
+            // Create data rows (functional style with AtomicInteger for row index)
+            AtomicInteger rowNum = new AtomicInteger(1);
+            inventories.forEach(inventory -> {
+                Row row = sheet.createRow(rowNum.getAndIncrement());
+
                 row.createCell(0).setCellValue(inventory.getProductId());
                 row.createCell(1).setCellValue(
-                    inventory.getQuantity() != null ? inventory.getQuantity() : 0);
+                        inventory.getQuantity() != null ? inventory.getQuantity() : 0);
                 row.createCell(2).setCellValue(
-                    inventory.getReservedQuantity() != null ? inventory.getReservedQuantity() : 0);
+                        inventory.getReservedQuantity() != null ? inventory.getReservedQuantity() : 0);
                 row.createCell(3).setCellValue(inventory.getAvailableQuantity());
                 row.createCell(4).setCellValue(
-                    inventory.getMinimumStockLevel() != null ? inventory.getMinimumStockLevel() : 0);
+                        inventory.getMinimumStockLevel() != null ? inventory.getMinimumStockLevel() : 0);
                 row.createCell(5).setCellValue(
-                    inventory.getMaximumStockLevel() != null ? inventory.getMaximumStockLevel() : 0);
+                        inventory.getMaximumStockLevel() != null ? inventory.getMaximumStockLevel() : 0);
                 row.createCell(6).setCellValue(
-                    inventory.getLocation() != null ? inventory.getLocation() : "");
+                        inventory.getLocation() != null ? inventory.getLocation() : "");
                 row.createCell(7).setCellValue(inventory.needsReorder() ? "Yes" : "No");
-            }
-            
+            });
+
             // Auto-size columns
-            for (int i = 0; i < headers.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
+            IntStream.range(0, headers.length).forEach(sheet::autoSizeColumn);
             
             workbook.write(outputStream);
             return outputStream.toByteArray();
@@ -198,42 +198,40 @@ public class ReportService {
             // Create header row
             Row headerRow = sheet.createRow(0);
             String[] headers = {
-                "Order ID", "Order Number", "Customer ID", "Order Date", 
+                "Order ID", "Order Number", "Customer ID", "Order Date",
                 "Status", "Subtotal", "Tax", "Total"
             };
-            
-            for (int i = 0; i < headers.length; i++) {
+
+            IntStream.range(0, headers.length).forEach(i -> {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(headers[i]);
                 cell.setCellStyle(headerStyle);
-            }
-            
+            });
+
             // Create data rows
-            int rowNum = 1;
-            for (Order order : orders) {
-                Row row = sheet.createRow(rowNum++);
-                
+            AtomicInteger rowNum = new AtomicInteger(1);
+            orders.forEach(order -> {
+                Row row = sheet.createRow(rowNum.getAndIncrement());
+
                 row.createCell(0).setCellValue(order.getId());
                 row.createCell(1).setCellValue(
-                    order.getOrderNumber() != null ? order.getOrderNumber() : "");
+                        order.getOrderNumber() != null ? order.getOrderNumber() : "");
                 row.createCell(2).setCellValue(order.getCustomerId());
                 row.createCell(3).setCellValue(
-                    order.getOrderDate() != null ? 
-                        order.getOrderDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : "");
+                        order.getOrderDate() != null ?
+                                order.getOrderDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : "");
                 row.createCell(4).setCellValue(
-                    order.getStatus() != null ? order.getStatus().name() : "");
+                        order.getStatus() != null ? order.getStatus().name() : "");
                 row.createCell(5).setCellValue(
-                    order.getSubtotalAmount() != null ? order.getSubtotalAmount().doubleValue() : 0);
+                        order.getSubtotalAmount() != null ? order.getSubtotalAmount().doubleValue() : 0);
                 row.createCell(6).setCellValue(
-                    order.getTaxAmount() != null ? order.getTaxAmount().doubleValue() : 0);
+                        order.getTaxAmount() != null ? order.getTaxAmount().doubleValue() : 0);
                 row.createCell(7).setCellValue(
-                    order.getTotalAmount() != null ? order.getTotalAmount().doubleValue() : 0);
-            }
-            
+                        order.getTotalAmount() != null ? order.getTotalAmount().doubleValue() : 0);
+            });
+
             // Auto-size columns
-            for (int i = 0; i < headers.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
+            IntStream.range(0, headers.length).forEach(sheet::autoSizeColumn);
             
             workbook.write(outputStream);
             return outputStream.toByteArray();
@@ -267,41 +265,39 @@ public class ReportService {
             // Create header row
             Row headerRow = sheet.createRow(0);
             String[] headers = {
-                "ID", "SKU", "Name", "Description", "Price", 
+                "ID", "SKU", "Name", "Description", "Price",
                 "Promotional Price", "Category", "External Provider ID"
             };
-            
-            for (int i = 0; i < headers.length; i++) {
+
+            IntStream.range(0, headers.length).forEach(i -> {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(headers[i]);
                 cell.setCellStyle(headerStyle);
-            }
-            
+            });
+
             // Create data rows
-            int rowNum = 1;
-            for (Product product : products) {
-                Row row = sheet.createRow(rowNum++);
-                
+            AtomicInteger rowNum = new AtomicInteger(1);
+            products.forEach(product -> {
+                Row row = sheet.createRow(rowNum.getAndIncrement());
+
                 row.createCell(0).setCellValue(product.getId());
                 row.createCell(1).setCellValue(product.getSku() != null ? product.getSku() : "");
                 row.createCell(2).setCellValue(product.getName() != null ? product.getName() : "");
                 row.createCell(3).setCellValue(
-                    product.getDescription() != null ? product.getDescription() : "");
+                        product.getDescription() != null ? product.getDescription() : "");
                 row.createCell(4).setCellValue(
-                    product.getPrice() != null ? product.getPrice().doubleValue() : 0);
+                        product.getPrice() != null ? product.getPrice().doubleValue() : 0);
                 row.createCell(5).setCellValue(
-                    product.getPromotionalPrice() != null ? 
-                        product.getPromotionalPrice().doubleValue() : 0);
+                        product.getPromotionalPrice() != null ?
+                                product.getPromotionalPrice().doubleValue() : 0);
                 row.createCell(6).setCellValue(
-                    product.getCategory() != null ? product.getCategory().getName() : "");
+                        product.getCategory() != null ? product.getCategory().getName() : "");
                 row.createCell(7).setCellValue(
-                    product.getExternalProviderId() != null ? product.getExternalProviderId() : "");
-            }
-            
+                        product.getExternalProviderId() != null ? product.getExternalProviderId() : "");
+            });
+
             // Auto-size columns
-            for (int i = 0; i < headers.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
+            IntStream.range(0, headers.length).forEach(sheet::autoSizeColumn);
             
             workbook.write(outputStream);
             return outputStream.toByteArray();

@@ -9,8 +9,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -55,32 +58,17 @@ public class ProductManagementService implements ProductService {
     @Transactional
     public Product updateProduct(Long id, Product product) {
         Product existing = getProduct(id);
-        
-        if (product.getName() != null) {
-            existing.setName(product.getName());
-        }
-        if (product.getDescription() != null) {
-            existing.setDescription(product.getDescription());
-        }
-        if (product.getPrice() != null) {
-            existing.updatePrice(product.getPrice());
-        }
-        if (product.getPromotionalPrice() != null) {
-            existing.setPromotionalPrice(product.getPromotionalPrice());
-        }
-        if (product.getCategory() != null) {
-            existing.setCategory(product.getCategory());
-        }
-        if (product.getFeatures() != null) {
-            existing.setFeatures(product.getFeatures());
-        }
-        if (product.getMetadata() != null) {
-            existing.setMetadata(product.getMetadata());
-        }
-        if (product.getActive() != null) {
-            existing.setActive(product.getActive());
-        }
-        
+
+        // Actualización funcional de campos simples
+        Optional.ofNullable(product.getName()).ifPresent(existing::setName);
+        Optional.ofNullable(product.getDescription()).ifPresent(existing::setDescription);
+        Optional.ofNullable(product.getPrice()).ifPresent(existing::updatePrice);
+        Optional.ofNullable(product.getPromotionalPrice()).ifPresent(existing::setPromotionalPrice);
+        Optional.ofNullable(product.getCategory()).ifPresent(existing::setCategory);
+        Optional.ofNullable(product.getFeatures()).ifPresent(existing::setFeatures);
+        Optional.ofNullable(product.getMetadata()).ifPresent(existing::setMetadata);
+        Optional.ofNullable(product.getActive()).ifPresent(existing::setActive);
+
         existing.setUpdatedAt(LocalDateTime.now());
         return productPersistencePort.save(existing);
     }
@@ -148,16 +136,19 @@ public class ProductManagementService implements ProductService {
         if (vec1.length != vec2.length) {
             return 0.0;
         }
-        double dotProduct = 0.0;
-        double norm1 = 0.0;
-        double norm2 = 0.0;
-        
-        for (int i = 0; i < vec1.length; i++) {
-            dotProduct += vec1[i] * vec2[i];
-            norm1 += vec1[i] * vec1[i];
-            norm2 += vec2[i] * vec2[i];
-        }
-        
+
+        double dotProduct = IntStream.range(0, vec1.length)
+                .mapToDouble(i -> vec1[i] * vec2[i])
+                .sum();
+
+        double norm1 = Arrays.stream(vec1)
+                .map(v -> v * v)
+                .sum();
+
+        double norm2 = Arrays.stream(vec2)
+                .map(v -> v * v)
+                .sum();
+
         double denominator = Math.sqrt(norm1) * Math.sqrt(norm2);
         return denominator == 0.0 ? 0.0 : dotProduct / denominator;
     }
@@ -173,25 +164,22 @@ public class ProductManagementService implements ProductService {
         }
 
         int featureLength = features.length;
-        int rows = weights.length;
-        int cols = weights[0].length;
 
-        if (cols != featureLength) {
+        // Validar que todas las filas tengan el mismo número de columnas
+        int cols = weights[0].length;
+        if (cols != featureLength ||
+                Arrays.stream(weights).anyMatch(row -> row.length != cols)) {
             throw new IllegalArgumentException("Matrix columns must match feature vector length");
         }
 
-        double[] result = new double[rows];
-
-        // Multiplicación Matriz-Vector
-        for (int i = 0; i < rows; i++) {
-            double sum = 0;
-            for (int j = 0; j < cols; j++) {
-                sum += weights[i][j] * features[j];
-            }
-            result[i] = sum;
-        }
-
-        return result;
+        // Multiplicación Matriz-Vector en estilo funcional
+        return Arrays.stream(weights)
+                .mapToDouble(row ->
+                        IntStream.range(0, featureLength)
+                                .mapToDouble(j -> row[j] * features[j])
+                                .sum()
+                )
+                .toArray();
     }
 
     @Override

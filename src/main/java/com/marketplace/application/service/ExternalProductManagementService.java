@@ -119,40 +119,45 @@ public class ExternalProductManagementService {
      * Determines if it should be stored, updated, or only displayed
      */
     private Product processSingleProduct(Product product) {
-        if (product == null) {
-            return null;
-        }
-
-        // Basic validation: must have name and positive price
-        if (product.getName() == null || product.getName().isBlank()) {
-            log.warn("Skipping external product without name. SKU={}", product.getSku());
-            return null;
-        }
-
-        if (product.getPrice() == null ||
-                product.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("Skipping external product with invalid price. SKU={}, price={}",
-                    product.getSku(), product.getPrice());
-            return null;
-        }
-
-        // Example business rule: ignore products that are clearly test data
-        String lowerName = product.getName().toLowerCase();
-        if (lowerName.contains("test") || lowerName.contains("dummy")) {
-            log.info("Ignoring external test product. SKU={}, name={}", product.getSku(), product.getName());
-            return null;
-        }
-
-        // Ensure external products are marked and active by default
-        if (product.getIsExternal() == null) {
-            product.setIsExternal(true);
-        }
-        if (product.getActive() == null) {
-            product.setActive(true);
-        }
-
-        // At this point the product is considered valid for synchronization
-        return product;
+        return java.util.Optional.ofNullable(product)
+                // Validación básica: nombre obligatorio
+                .filter(p -> {
+                    if (p.getName() == null || p.getName().isBlank()) {
+                        log.warn("Skipping external product without name. SKU={}", p.getSku());
+                        return false;
+                    }
+                    return true;
+                })
+                // Validación de precio positivo
+                .filter(p -> {
+                    if (p.getPrice() == null || p.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                        log.warn("Skipping external product with invalid price. SKU={}, price={}",
+                                p.getSku(), p.getPrice());
+                        return false;
+                    }
+                    return true;
+                })
+                // Regla de negocio: ignorar datos de prueba
+                .filter(p -> {
+                    String lowerName = p.getName().toLowerCase();
+                    if (lowerName.contains("test") || lowerName.contains("dummy")) {
+                        log.info("Ignoring external test product. SKU={}, name={}", p.getSku(), p.getName());
+                        return false;
+                    }
+                    return true;
+                })
+                // Normalización de flags por defecto
+                .map(p -> {
+                    if (p.getIsExternal() == null) {
+                        p.setIsExternal(true);
+                    }
+                    if (p.getActive() == null) {
+                        p.setActive(true);
+                    }
+                    return p;
+                })
+                // Si alguna validación falla, devolvemos null (para ser filtrado más adelante)
+                .orElse(null);
     }
 }
 
