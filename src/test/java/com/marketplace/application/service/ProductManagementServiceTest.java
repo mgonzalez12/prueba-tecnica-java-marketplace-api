@@ -3,7 +3,6 @@ package com.marketplace.application.service;
 import com.marketplace.application.usecases.InventoryService;
 import com.marketplace.domain.model.Product;
 import com.marketplace.domain.port.ProductPersistencePort;
-import com.marketplace.domain.service.ProductDomainService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,9 +25,6 @@ class ProductManagementServiceTest {
 
     @Mock
     private ProductPersistencePort productPersistencePort;
-
-    @Mock
-    private ProductDomainService productDomainService;
 
     @Mock
     private InventoryService inventoryService;
@@ -101,18 +97,23 @@ class ProductManagementServiceTest {
     @DisplayName("Should calculate product similarity")
     void shouldCalculateProductSimilarity() {
         // Given
-        double[][] weights = {{0.5, 0.3, 0.2}};
-        double[] expectedResult = {1.4};
-        
-        when(productPersistencePort.findById(1L)).thenReturn(Optional.of(product));
-        when(productDomainService.calculateProductScore(product, weights)).thenReturn(expectedResult);
+            product.setFeatures(new double[]{1.0, 2.0, 3.0});
+            double[][] weights = {
+                    {0.5, 0.3, 0.2},
+                    {0.2, 0.4, 0.4},
+                    {0.1, 0.1, 0.8}
+            };
 
-        // When
-        double[] result = productManagementService.calculateProductSimilarity(1L, weights);
+            when(productPersistencePort.findById(1L)).thenReturn(Optional.of(product));
 
-        // Then
-        assertArrayEquals(expectedResult, result);
-        verify(productDomainService, times(1)).calculateProductScore(product, weights);
+            // When
+            double[] result = productManagementService.calculateProductSimilarity(1L, weights);
+
+            // Then
+            assertEquals(3, result.length);
+            assertEquals(1.7, result[0], 0.01);
+            assertEquals(2.2, result[1], 0.01);
+            assertEquals(2.7, result[2], 0.01);
     }
 }
 

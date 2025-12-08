@@ -4,7 +4,6 @@ import com.marketplace.application.usecases.InventoryService;
 import com.marketplace.application.usecases.ProductService;
 import com.marketplace.domain.model.Product;
 import com.marketplace.domain.port.ProductPersistencePort;
-import com.marketplace.domain.service.ProductDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +17,6 @@ import java.util.stream.Collectors;
 public class ProductManagementService implements ProductService {
 
     private final ProductPersistencePort productPersistencePort;
-    private final ProductDomainService productDomainService;
     private final InventoryService inventoryService;
 
     @Override
@@ -120,7 +118,7 @@ public class ProductManagementService implements ProductService {
     @Override
     public double[] calculateProductSimilarity(Long productId, double[][] weights) {
         Product product = getProduct(productId);
-        return productDomainService.calculateProductScore(product, weights);
+            return calculateProductScore(product, weights);
     }
 
     @Override
@@ -150,7 +148,6 @@ public class ProductManagementService implements ProductService {
         if (vec1.length != vec2.length) {
             return 0.0;
         }
-        
         double dotProduct = 0.0;
         double norm1 = 0.0;
         double norm2 = 0.0;
@@ -163,6 +160,38 @@ public class ProductManagementService implements ProductService {
         
         double denominator = Math.sqrt(norm1) * Math.sqrt(norm2);
         return denominator == 0.0 ? 0.0 : dotProduct / denominator;
+    }
+
+    /**
+     * Simula un cálculo complejo de matriz para similitud o clasificación de productos.
+     * Multiplica el vector de características del producto por una matriz de pesos.
+     */
+    private double[] calculateProductScore(Product product, double[][] weights) {
+        double[] features = product.getFeatures();
+        if (features == null || weights == null) {
+            throw new IllegalArgumentException("Features and weights cannot be null");
+        }
+
+        int featureLength = features.length;
+        int rows = weights.length;
+        int cols = weights[0].length;
+
+        if (cols != featureLength) {
+            throw new IllegalArgumentException("Matrix columns must match feature vector length");
+        }
+
+        double[] result = new double[rows];
+
+        // Multiplicación Matriz-Vector
+        for (int i = 0; i < rows; i++) {
+            double sum = 0;
+            for (int j = 0; j < cols; j++) {
+                sum += weights[i][j] * features[j];
+            }
+            result[i] = sum;
+        }
+
+        return result;
     }
 
     @Override
