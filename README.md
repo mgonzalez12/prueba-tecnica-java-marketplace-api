@@ -249,6 +249,32 @@ O ejecutar directamente la clase `MarketplaceApplication`.
 - ✅ **Perfiles de Entorno**: Configuración por ambiente
 - ✅ **DB en Memoria**: H2 para desarrollo
 
+### Concurrencia en el proyecto (ExecutorService, CompletableFuture, hilos virtuales)
+
+La concurrencia se utiliza principalmente en la integración con productos externos:
+
+- **Configuración de hilos virtuales**  
+  - Archivo: `VirtualThreadConfig` (`infrastructure/config/VirtualThreadConfig.java`)  
+  - Define un `ExecutorService` global basado en **hilos virtuales** (`Executors.newVirtualThreadPerTaskExecutor()`), expuesto como bean `virtualThreadExecutor`.  
+  - Este executor se usa para ejecutar tareas I/O‑bound (llamadas a la API externa) en hilos muy ligeros, sin bloquear el pool clásico de hilos de Spring.
+
+- **Procesamiento asíncrono con `CompletableFuture`**  
+  - Archivo: `ExternalProductManagementService` (`application/service/ExternalProductManagementService.java`)  
+  - Método `fetchAndSynchronizeProducts()`:
+    - Anotado con `@Async`, devuelve `CompletableFuture<List<Product>>`.
+    - Encadena operaciones con `thenApply` y `exceptionally` para **sincronizar productos externos en segundo plano** sin bloquear el hilo HTTP.
+  - Método `fetchExternalProduct(String externalId)`:
+    - Devuelve `CompletableFuture<Product>` al consultar un producto externo por ID.
+
+- **Procesamiento concurrente de lotes con hilos virtuales**  
+  - En `ExternalProductManagementService.processExternalProductsBatch(...)`:
+    - Usa `CompletableFuture.supplyAsync(..., virtualThreadExecutor)` sobre un `stream` de productos externos.
+    - Cada producto se valida y procesa en paralelo sobre **hilos virtuales**, lo que permite manejar grandes volúmenes sin saturar el sistema.
+    - Después, hace `join()` de todos los futuros y filtra los productos válidos.
+
+- **Sincronización y consistencia de datos**  
+  - La lógica de negocio (validaciones, marcado de productos externos, activación por defecto, etc.) se ejecuta dentro de estas tareas asíncronas, pero **toda la escritura en la base de datos** sigue pasando por los servicios de aplicación y los puertos de dominio, manteniendo la **arquitectura hexagonal** y la consistencia transaccional.
+
 ## 🧪 Pruebas
 
 Para ejecutar las pruebas:

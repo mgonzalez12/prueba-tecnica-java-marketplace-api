@@ -133,48 +133,56 @@ public class CategoryManagementService implements CategoryService {
 
         /**
          * Valida si al asignar un padre a una categoría se crea un ciclo.
+         * Implementado con estilo funcional (Optional + lambdas).
          */
         private void validateCategoryHierarchy(Category category, Category newParent) {
-            if (newParent == null) {
-                return;
-            }
+            Optional.ofNullable(newParent).ifPresent(parent -> {
+                boolean isSelfParent = Optional.ofNullable(parent.getId())
+                        .filter(parentId -> category.getId() != null && parentId.equals(category.getId()))
+                        .isPresent();
 
-            // No puede ser su propio padre
-            if (newParent.getId() != null && category.getId() != null
-                    && newParent.getId().equals(category.getId())) {
-                throw new IllegalArgumentException("A category cannot be its own parent.");
-            }
+                if (isSelfParent) {
+                    throw new IllegalArgumentException("A category cannot be its own parent.");
+                }
 
-            // Detección recursiva de ciclos: comprobar si category es ancestro de newParent
-            if (isAncestor(category, newParent, new HashSet<>())) {
-                throw new IllegalArgumentException(
-                        "Cycle detected: Category cannot be an ancestor of its own parent."
-                );
-            }
+                // Detección recursiva de ciclos: comprobar si category es ancestro de parent
+                if (isAncestor(category, parent, new HashSet<>())) {
+                    throw new IllegalArgumentException(
+                            "Cycle detected: Category cannot be an ancestor of its own parent."
+                    );
+                }
+            });
         }
 
         /**
          * Comprueba recursivamente si ancestor está en la jerarquía de category.
+         * Implementado con switch expression (Java 21).
          */
         private boolean isAncestor(Category ancestor, Category category, Set<Long> visited) {
-            if (category == null || ancestor == null) {
+            if (ancestor == null) {
                 return false;
             }
 
-            if (category.getId() != null) {
-                if (visited.contains(category.getId())) {
-                    // Ya visitado, posible ciclo en datos existentes
-                    return false;
-                }
-                visited.add(category.getId());
+            return switch (category) {
+                case null -> false;
+                default -> {
+                    Long categoryId = category.getId();
 
-                if (category.getId().equals(ancestor.getId())) {
-                    return true;
-                }
-            }
+                    if (categoryId == null || visited.contains(categoryId)) {
+                        // Sin id o ya visitado → evitamos ciclos / datos inconsistentes
+                        yield false;
+                    }
 
-            // Comprobar recursivamente el padre
-            return isAncestor(ancestor, category.getParent(), visited);
+                    visited.add(categoryId);
+
+                    if (categoryId.equals(ancestor.getId())) {
+                        yield true;
+                    }
+
+                    // Comprobar recursivamente el padre
+                    yield isAncestor(ancestor, category.getParent(), visited);
+                }
+            };
         }
 
         /**
@@ -206,31 +214,39 @@ public class CategoryManagementService implements CategoryService {
 
         /**
          * Valida recursivamente una categoría y sus ancestros para detectar ciclos.
+         * Implementado con switch expression (Java 21).
          */
         private void validateCategoryRecursive(Category category, Set<Long> visited, Set<Long> recursionStack) {
-            if (category.getId() == null) {
-                return;
+            switch (category) {
+                case null -> {
+                    // Nada que validar
+                }
+                default -> {
+                    Long id = category.getId();
+                    if (id == null) {
+                        return;
+                    }
+
+                    if (recursionStack.contains(id)) {
+                        throw new IllegalStateException(
+                                String.format("Cycle detected in category hierarchy at category ID: %d", id)
+                        );
+                    }
+
+                    if (visited.contains(id)) {
+                        return; // Ya validada
+                    }
+
+                    recursionStack.add(id);
+
+                    // Validar recursivamente el padre
+                    Optional.ofNullable(category.getParent())
+                            .ifPresent(parent -> validateCategoryRecursive(parent, visited, recursionStack));
+
+                    recursionStack.remove(id);
+                    visited.add(id);
+                }
             }
-
-            if (recursionStack.contains(category.getId())) {
-                throw new IllegalStateException(
-                        String.format("Cycle detected in category hierarchy at category ID: %d", category.getId())
-                );
-            }
-
-            if (visited.contains(category.getId())) {
-                return; // Ya validada
-            }
-
-            recursionStack.add(category.getId());
-
-            // Validar recursivamente el padre
-            if (category.getParent() != null) {
-                validateCategoryRecursive(category.getParent(), visited, recursionStack);
-            }
-
-            recursionStack.remove(category.getId());
-            visited.add(category.getId());
         }
 
         /**
