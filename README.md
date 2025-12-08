@@ -133,6 +133,95 @@ src/main/java/com/marketplace/
 - **Apache POI** (Generación Excel)
 - **MapStruct** (Mappers)
 
+## 🔐 Seguridad y Autenticación (JWT)
+
+La API incorpora autenticación basada en **JWT (JSON Web Token)** y autorización por **roles**:
+
+- **Endpoints de autenticación**
+  - `POST /auth/register` → Registra un nuevo usuario y devuelve un JWT.
+  - `POST /auth/login` → Autentica un usuario existente y devuelve un JWT.
+
+- **Usuarios de ejemplo precargados** (`src/main/resources/data.sql`)
+  - **Administrador**
+    - Email: `admin@technicaldtm.com`
+    - Password: `password`
+    - Rol: `ADMIN`
+  - **Usuario normal**
+    - Email: `user@technicaldtm.com`
+    - Password: `password`
+    - Rol: `USER`
+
+- **Uso en Swagger**
+  1. Llama a `POST /auth/login` con uno de los usuarios de ejemplo.
+  2. Copia el valor del campo `token` de la respuesta.
+  3. En Swagger UI (`/swagger-ui.html`), pulsa en **Authorize** (esquema `bearerAuth`) y pega `Bearer <token>`.
+  4. A partir de ese momento, las llamadas a endpoints protegidos se realizarán con el JWT.
+
+- **Reglas de autorización principales**
+  - `ROLE_USER`:
+    - Puede ver la lista de productos (`GET /api/v1/products`), detalle (`GET /api/v1/products/{id}`) y búsqueda (`GET /api/v1/products/search`).
+    - Puede ver todas las categorías (`GET /api/v1/categories`) y detalle (`GET /api/v1/categories/{id}`).
+    - Puede ver **solo sus propias órdenes** (`GET /api/v1/orders/customer/{customerId}`) si el `Customer` asociado tiene su mismo email.
+    - Puede registrar/ver su propia actividad de cliente (`POST /api/v1/customers/{id}/activity`) si el `Customer` asociado tiene su mismo email.
+  - `ROLE_ADMIN`:
+    - Tiene acceso completo a todos los endpoints de la API (productos, categorías, órdenes, clientes, inventario, ficheros, reportes, productos externos, etc.).
+
+### Clases nuevas relacionadas con JWT y seguridad
+
+- **Dominio / Persistencia**
+  - `com.marketplace.domain.model.User` → Modelo de dominio para usuarios del sistema.
+  - `com.marketplace.domain.model.Role` → Rol de usuario (`ADMIN`, `USER`).
+  - `com.marketplace.domain.port.UserPersistencePort` → Puerto de persistencia para usuarios.
+  - `com.marketplace.infrastructure.adapter.entity.UserEntity` → Entidad JPA para la tabla `users`.
+  - `com.marketplace.infrastructure.adapter.entity.RoleEntity` → Entidad JPA para la tabla `roles`.
+  - `com.marketplace.infrastructure.adapter.repository.UserJpaRepository` → Repositorio Spring Data JPA de usuarios.
+  - `com.marketplace.infrastructure.adapter.repository.RoleJpaRepository` → Repositorio Spring Data JPA de roles.
+  - `com.marketplace.infrastructure.adapter.mapper.UserDboMapper` → Mapeo entre `User` y `UserEntity` (incluyendo roles).
+  - `com.marketplace.infrastructure.adapter.UserSpringJpaAdapter` → Adapter que implementa `UserPersistencePort` usando JPA.
+
+- **Servicios de aplicación y DTOs**
+  - `com.marketplace.application.service.AuthService` → Lógica de registro de usuarios (asigna roles y encripta contraseñas).
+  - `com.marketplace.infrastructure.rest.dto.request.LoginRequestDto` → DTO para login (`email`, `password`).
+  - `com.marketplace.infrastructure.rest.dto.request.RegisterRequestDto` → DTO para registro de usuario.
+  - `com.marketplace.infrastructure.rest.dto.response.AuthResponseDto` → Respuesta con el JWT (`token`, `tokenType`).
+
+- **Seguridad / JWT**
+  - `com.marketplace.infrastructure.config.JwtProperties` → Carga `security.jwt.secret` y `security.jwt.expiration-ms` desde `application.yaml`.
+  - `com.marketplace.infrastructure.config.JwtTokenProvider` → Genera, valida y parsea tokens JWT.
+  - `com.marketplace.infrastructure.config.CustomUserDetailsService` → Implementación de `UserDetailsService` basada en `UserEntity`.
+  - `com.marketplace.infrastructure.config.JwtAuthenticationFilter` → Filtro que lee el header `Authorization`, valida el JWT y autentica al usuario en el `SecurityContext`.
+  - `com.marketplace.infrastructure.config.SecurityConfig` → Configuración de Spring Security (stateless, rutas públicas `/auth/**`, esquema de filtros, `PasswordEncoder`, `AuthenticationManager`).
+
+- **Controlador de autenticación**
+  - `com.marketplace.infrastructure.rest.controller.AuthController`  
+    - Expone `/auth/register` y `/auth/login`.  
+    - Autentica con `AuthenticationManager` y genera el JWT con `JwtTokenProvider`.  
+
+### Clases modificadas para integrar roles y seguridad
+
+- **Controladores REST**
+  - `ProductController`, `CategoryController`, `OrderController`, `CustomerApiController`, `InventoryController`, `ReportController`, `FileController`, `ExternalProductController`  
+    - Se añadieron anotaciones `@PreAuthorize` para restringir el acceso según el rol (`USER`/`ADMIN`).  
+    - Se añadieron anotaciones `@SecurityRequirement(name = "bearerAuth")` para que Swagger muestre que los endpoints requieren JWT.  
+  - `OrderController`  
+    - En `getOrdersByCustomer` se añadió lógica para que un usuario normal solo pueda ver sus propias órdenes (comparando `authentication.getName()` con el email del `Customer`).  
+  - `CustomerApiController`  
+    - En `recordCustomerActivity` se añadió lógica para que un usuario normal solo pueda registrar/ver su propia actividad de cliente.
+
+- **Configuración de Swagger/OpenAPI**
+  - `SwaggerConfig`  
+    - Se actualizó `GroupedOpenApi` para incluir también las rutas `/auth/**` en la documentación.
+  - `SpringDocConfig`  
+    - Se definió un esquema de seguridad global `bearerAuth` (JWT) para OpenAPI.  
+    - Se añaden requisitos de seguridad a todos los endpoints (excepto `/auth/**`) y se mantiene la limpieza de esquemas problemáticos ya existente.
+
+- **Datos de ejemplo**
+  - `src/main/resources/data.sql`  
+    - Se agregaron inserciones en las tablas `roles`, `users` y `user_roles` para crear:  
+      - Un usuario administrador (`admin@technicaldtm.com`, rol `ADMIN`).  
+      - Un usuario normal (`user@technicaldtm.com`, rol `USER`).  
+    - Ambos con la contraseña encriptada (`password`).
+
 ## 🚀 Requisitos
 
 - Java 21 o superior
