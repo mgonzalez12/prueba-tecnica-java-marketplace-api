@@ -1,9 +1,5 @@
 package com.marketplace.infrastructure.rest.dto.external;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -20,15 +16,11 @@ import java.util.List;
  *   "images": ["https://placehold.co/600x400"]
  * }
  */
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class ExternalProductCreateRequest {
-    private String title;
-    private BigDecimal price;
-    private String description;
-    private Long categoryId;
-    private List<String> images;
+public record ExternalProductCreateRequest(
+        String title,
+        BigDecimal price,
+        String description,
+        Long categoryId,
+        List<String> images
+) {
 }
-
-
