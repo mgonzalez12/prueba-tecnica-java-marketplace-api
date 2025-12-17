@@ -7,45 +7,97 @@ import com.marketplace.infrastructure.rest.dto.request.OrderRequestDto;
 import com.marketplace.infrastructure.rest.dto.response.OrderItemResponseDto;
 import com.marketplace.infrastructure.rest.dto.response.OrderResponseDto;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
-import org.mapstruct.Named;
 
 import java.util.List;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface OrderRestMapper {
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "orderNumber", ignore = true)
-    @Mapping(target = "orderDate", ignore = true)
-    @Mapping(target = "processedDate", ignore = true)
-    @Mapping(target = "shippedDate", ignore = true)
-    @Mapping(target = "deliveredDate", ignore = true)
-    @Mapping(target = "status", ignore = true)
-    @Mapping(target = "subtotalAmount", ignore = true)
-    @Mapping(target = "discountAmount", ignore = true)
-    @Mapping(target = "taxAmount", ignore = true)
-    @Mapping(target = "totalAmount", ignore = true)
-    @Mapping(target = "items", source = "items")
-    Order toDomain(OrderRequestDto request);
-
-    @Mapping(target = "status", source = ".", qualifiedByName = "getStatusName")
-    OrderResponseDto toResponse(Order order);
-
-    @Named("getStatusName")
-    default String getStatusName(Order order) {
-        return order.getStatus() != null ? order.getStatus().name() : null;
+    default Order toDomain(OrderRequestDto request) {
+        if (request == null) {
+            return null;
+        }
+        
+        Order order = Order.builder()
+                .customerId(request.customerId())
+                .shippingAddress(request.shippingAddress())
+                .notes(request.notes())
+                .build();
+        
+        if (request.items() != null) {
+            order.setItems(toDomainList(request.items()));
+        }
+        
+        return order;
     }
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "subtotal", ignore = true)
-    OrderItem toDomain(OrderItemRequestDto request);
+    default OrderResponseDto toResponse(Order order) {
+        if (order == null) {
+            return null;
+        }
+        
+        return new OrderResponseDto(
+                order.getId(),
+                order.getOrderNumber(),
+                order.getCustomerId(),
+                order.getOrderDate(),
+                order.getProcessedDate(),
+                order.getShippedDate(),
+                order.getDeliveredDate(),
+                order.getStatus() != null ? order.getStatus().name() : null,
+                order.getSubtotalAmount(),
+                order.getDiscountAmount(),
+                order.getTaxAmount(),
+                order.getTotalAmount(),
+                order.getShippingAddress(),
+                order.getNotes(),
+                toResponseList(order.getItems())
+        );
+    }
 
-    List<OrderItem> toDomainList(List<OrderItemRequestDto> items);
+    default OrderItem toDomain(OrderItemRequestDto request) {
+        if (request == null) {
+            return null;
+        }
+        
+        return OrderItem.builder()
+                .productId(request.productId())
+                .quantity(request.quantity())
+                .unitPrice(request.unitPrice())
+                .build();
+    }
 
-    OrderItemResponseDto toResponse(OrderItem item);
+    default List<OrderItem> toDomainList(List<OrderItemRequestDto> items) {
+        if (items == null) {
+            return null;
+        }
+        return items.stream()
+                .map(this::toDomain)
+                .toList();
+    }
 
-    List<OrderItemResponseDto> toResponseList(List<OrderItem> items);
+    default OrderItemResponseDto toResponse(OrderItem item) {
+        if (item == null) {
+            return null;
+        }
+        
+        return new OrderItemResponseDto(
+                item.getId(),
+                item.getProductId(),
+                item.getQuantity(),
+                item.getUnitPrice(),
+                item.getSubtotal()
+        );
+    }
+
+    default List<OrderItemResponseDto> toResponseList(List<OrderItem> items) {
+        if (items == null) {
+            return null;
+        }
+        return items.stream()
+                .map(this::toResponse)
+                .toList();
+    }
 }
 

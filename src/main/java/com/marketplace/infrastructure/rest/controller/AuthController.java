@@ -33,17 +33,17 @@ public class AuthController {
     @Operation(summary = "Register a new user and return a JWT")
     public ResponseEntity<AuthResponseDto> register(@Valid @RequestBody RegisterRequestDto request) {
         authService.register(
-                request.getFirstName(),
-                request.getLastName(),
-                request.getEmail(),
-                request.getPassword(),
+                request.firstName(),
+                request.lastName(),
+                request.email(),
+                request.password(),
                 false
         );
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
+                        request.email(),
+                        request.password()
                 )
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -57,8 +57,8 @@ public class AuthController {
     public ResponseEntity<AuthResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
+                        request.email(),
+                        request.password()
                 )
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
