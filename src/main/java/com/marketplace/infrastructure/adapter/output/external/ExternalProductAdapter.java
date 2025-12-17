@@ -196,12 +196,12 @@ public class ExternalProductAdapter implements ExternalProductPort {
      */
     private Product mapToDomainProduct(ExternalProductDto dto) {
         Product.ProductBuilder builder = Product.builder()
-                .name(dto.getTitle())
-                .description(dto.getDescription())
-                .price(dto.getPrice())
-                .sku("EXT-" + dto.getId()) // Generate SKU from external ID
+                .name(dto.title())
+                .description(dto.description())
+                .price(dto.price())
+                .sku("EXT-" + dto.id()) // Generate SKU from external ID
                 .isExternal(true)
-                .externalProviderId(String.valueOf(dto.getId()))
+                .externalProviderId(String.valueOf(dto.id()))
                 .active(true);
 
         // Note: we do NOT attach a Category entity here to avoid foreign key issues.
@@ -214,12 +214,12 @@ public class ExternalProductAdapter implements ExternalProductPort {
 
         // Store images in metadata
         java.util.Map<String, String> metadata = new java.util.HashMap<>();
-        if (dto.getImages() != null && !dto.getImages().isEmpty()) {
-            metadata.put("images", String.join(",", dto.getImages()));
+        if (dto.images() != null && !dto.images().isEmpty()) {
+            metadata.put("images", String.join(",", dto.images()));
         }
-        if (dto.getCategory() != null) {
-            metadata.put("externalCategoryId", String.valueOf(dto.getCategory().getId()));
-            metadata.put("externalCategoryName", dto.getCategory().getName());
+        if (dto.category() != null) {
+            metadata.put("externalCategoryId", String.valueOf(dto.category().id()));
+            metadata.put("externalCategoryName", dto.category().name());
         }
         builder.metadata(metadata);
 
@@ -232,11 +232,11 @@ public class ExternalProductAdapter implements ExternalProductPort {
      */
     private double[] extractFeatures(ExternalProductDto dto) {
         // Simple feature vector: [normalized_price, category_id, has_images]
-        double normalizedPrice = dto.getPrice() != null ? 
-            dto.getPrice().doubleValue() / 1000.0 : 0.0; // Normalize price
-        double categoryId = dto.getCategory() != null ? 
-            dto.getCategory().getId().doubleValue() : 0.0;
-        double hasImages = (dto.getImages() != null && !dto.getImages().isEmpty()) ? 1.0 : 0.0;
+        double normalizedPrice = dto.price() != null ? 
+            dto.price().doubleValue() / 1000.0 : 0.0; // Normalize price
+        double categoryId = dto.category() != null ? 
+            dto.category().id().doubleValue() : 0.0;
+        double hasImages = (dto.images() != null && !dto.images().isEmpty()) ? 1.0 : 0.0;
         
         return new double[]{normalizedPrice, categoryId, hasImages};
     }
